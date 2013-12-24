@@ -31,7 +31,9 @@ class CSVArchive:
                 Party = pool.get('party.party')
                 party = Party(party)
                 model.party = party
-                values.update(Purchase(**values).on_change_party())
+                vals = Purchase(**values).on_change_party()
+                vals.update(values)
+                values = vals.copy()
 
         if model_name == 'purchase.line':
             if values.get('product') and values.get('quantity'):
