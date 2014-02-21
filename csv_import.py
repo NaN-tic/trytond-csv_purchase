@@ -56,5 +56,6 @@ class CSVArchive:
                 values.update(PurchaseLine(**values).on_change_quantity())
                 del values['_parent_purchase.currency']
                 del values['_parent_purchase.party']
+                del values['purchase']
 
         return values
