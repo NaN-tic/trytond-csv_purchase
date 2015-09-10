@@ -2,7 +2,6 @@
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
 from trytond.pool import Pool, PoolMeta
-from trytond.transaction import Transaction
 
 __all__ = ['CSVArchive']
 __metaclass__ = PoolMeta
@@ -12,55 +11,46 @@ class CSVArchive:
     __name__ = 'csv.archive'
 
     @classmethod
-    def _add_default_values(cls, model, values, parent_values=None):
+    def _import_data_purchase(cls, record, values, parent_values=None):
         '''
-        Get default values from Purchase and PurchaseLine objects
+        Purchase and Purchase Line data
         '''
-        values = super(CSVArchive, cls)._add_default_values(model, values, parent_values)
-
         pool = Pool()
-        Purchase = pool.get('purchase.purchase')
-        PurchaseLine = pool.get('purchase.line')
-        Company = pool.get('company.company')
+        Line = pool.get('purchase.line')
+        Party = pool.get('party.party')
 
-        model_name =  model.__name__
+        record_name = record.__name__
 
-        if model_name == 'purchase.purchase':
+        if record_name == 'purchase.purchase':
             party = values.get('party')
+
             if party:
-                Party = pool.get('party.party')
                 party = Party(party)
-                model.party = party
 
-                if values.get('invoice_address'):
-                    if not values.get('invoice_address') in party.addresses:
-                        del values['invoice_address']
+                if not record.id:
+                    default_values = record.default_get(record._fields.keys())
+                    for key in default_values:
+                        if 'rec_name' not in key:
+                            setattr(record, key, default_values[key])
+                    record.party = party
+                record.on_change_party()
 
-                vals = Purchase(**values).on_change_party()
-                vals.update(values)
-                values = vals.copy()
+                if values.get('invoice_address') \
+                        and values.get('invoice_address') in party.addresses:
+                    record.invoice_address = values.get('invoice_address') 
 
-        if model_name == 'purchase.line':
+                if values.get('lines'):
+                    record.lines = values.get('lines')
+
+                return record
+
+        if record_name == 'purchase.line':
             if values.get('product') and values.get('quantity'):
-                currency = parent_values.get('currency')
-                if not currency:
-                    company = Transaction().context.get('company')
-                    if company:
-                        currency = Company(company).currency.id
-                values = {
-                    'product': values.get('product'),
-                    '_parent_purchase.currency': currency,
-                    '_parent_purchase.party': parent_values.get('party'),
-                    'purchase': None,
-                    'type': 'line',
-                    'quantity': values.get('quantity'),
-                    'unit': None,
-                    'description': None
-                }
-                values.update(PurchaseLine(**values).on_change_product())
-                values.update(PurchaseLine(**values).on_change_quantity())
-                del values['_parent_purchase.currency']
-                del values['_parent_purchase.party']
-                del values['purchase']
+                line = Line()
+                line.product = values.get('product')
+                line.quantity = values.get('quantity')
+                line.on_change_product()
 
-        return values
+                return line
+
+        return record
