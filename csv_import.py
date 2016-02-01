@@ -16,6 +16,7 @@ class CSVArchive:
         Purchase and Purchase Line data
         '''
         pool = Pool()
+        Purchase = pool.get('purchase.purchase')
         Line = pool.get('purchase.line')
         Party = pool.get('party.party')
 
@@ -46,7 +47,16 @@ class CSVArchive:
 
         if record_name == 'purchase.line':
             if values.get('product') and values.get('quantity'):
+                purchase = Purchase()
+                default_values = Purchase.default_get(Purchase._fields.keys(),
+                        with_rec_name=False)
+                for key in default_values:
+                    setattr(purchase, key, default_values[key])
+                purchase.party = parent_values.get('party')
+                purchase.on_change_party()
+
                 line = Line()
+                line.purchase = purchase
                 line.product = values.get('product')
                 line.quantity = values.get('quantity')
                 line.on_change_product()
