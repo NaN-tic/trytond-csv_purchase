@@ -17,7 +17,6 @@ class CSVArchive:
         '''
         pool = Pool()
         Purchase = pool.get('purchase.purchase')
-        Line = pool.get('purchase.line')
         Party = pool.get('party.party')
 
         record_name = record.__name__
@@ -38,7 +37,7 @@ class CSVArchive:
 
                 if values.get('invoice_address') \
                         and values.get('invoice_address') in party.addresses:
-                    record.invoice_address = values.get('invoice_address') 
+                    record.invoice_address = values.get('invoice_address')
 
                 if values.get('lines'):
                     record.lines = values.get('lines')
@@ -55,12 +54,11 @@ class CSVArchive:
                 purchase.party = parent_values.get('party')
                 purchase.on_change_party()
 
-                line = Line()
-                line.purchase = purchase
-                line.product = values.get('product')
-                line.quantity = values.get('quantity')
-                line.on_change_product()
+                record.purchase = purchase
+                record.product = values.get('product')
+                record.quantity = values.get('quantity')
+                record.on_change_product()
 
-                return line
+                return record
 
         return record
